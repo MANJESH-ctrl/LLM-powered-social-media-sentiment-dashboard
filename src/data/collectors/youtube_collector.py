@@ -1,7 +1,7 @@
 from googleapiclient.discovery import build
 from typing import List, Dict, Any
 from .base_collector import BaseDataCollector
-from src.utils.config import Config
+from utils.config import Config
 from datetime import datetime
 
 class YouTubeCollector(BaseDataCollector):
@@ -79,17 +79,17 @@ class YouTubeCollector(BaseDataCollector):
             return {
                 'platform': 'youtube',
                 'brand_name': brand_name,
-                'id': video_id,
+                # 'id': video_id,
                 'title': snippet['title'],
                 'text': self._clean_text(snippet['description']),
-                'author': snippet['channelTitle'],
-                'created_utc': snippet['publishedAt'],
+                # 'author': snippet['channelTitle'],
+                # 'created_utc': snippet['publishedAt'],
                 'views': int(stats.get('viewCount', 0)),
                 'likes': int(stats.get('likeCount', 0)),
                 'comments_count': int(stats.get('commentCount', 0)),
-                'url': f"https://www.youtube.com/watch?v={video_id}",
+                # 'url': f"https://www.youtube.com/watch?v={video_id}",
                 'content_type': 'video',
-                'collected_at': datetime.now().isoformat()
+                # 'collected_at': datetime.now().isoformat()
             }
         except Exception as e:
             print(f"Error extracting video data: {str(e)}")
@@ -113,17 +113,17 @@ class YouTubeCollector(BaseDataCollector):
                 comment_data = {
                     'platform': 'youtube',
                     'brand_name': brand_name,
-                    'id': item['id'],
+                    # 'id': item['id'],
                     'title': '',  # Comments don't have titles
                     'text': self._clean_text(comment['textDisplay']),
-                    'author': comment['authorDisplayName'],
-                    'created_utc': comment['publishedAt'],
+                    # 'author': comment['authorDisplayName'],
+                    # 'created_utc': comment['publishedAt'],
                     'likes': int(comment.get('likeCount', 0)),
-                    'views': 0,
-                    'comments_count': 0,
-                    'url': f"https://www.youtube.com/watch?v={video_id}&lc={item['id']}",
+                    # 'views': 0,
+                    # 'comments_count': 0,
+                    # 'url': f"https://www.youtube.com/watch?v={video_id}&lc={item['id']}",
                     'content_type': 'comment',
-                    'collected_at': datetime.now().isoformat()
+                    # 'collected_at': datetime.now().isoformat()
                 }
                 comments_data.append(comment_data)
                 

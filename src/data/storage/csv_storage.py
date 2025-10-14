@@ -2,7 +2,7 @@ import pandas as pd
 import os
 from datetime import datetime
 from typing import List, Dict, Any
-from src.utils.config import Config
+from utils.config import Config
 
 class CSVStorage:
     """Handles storage of collected data in CSV format."""

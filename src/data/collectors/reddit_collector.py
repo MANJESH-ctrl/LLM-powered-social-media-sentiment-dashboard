@@ -2,7 +2,7 @@ import praw
 from typing import List, Dict, Any
 import time
 from .base_collector import BaseDataCollector
-from src.utils.config import Config
+from utils.config import Config
 from datetime import datetime
 
 class RedditCollector(BaseDataCollector):
@@ -57,18 +57,18 @@ class RedditCollector(BaseDataCollector):
                     post_data = {
                         'platform': 'reddit',
                         'brand_name': brand_name,
-                        'id': submission.id,
+                        # 'id': submission.id,
                         'title': submission.title,
                         'text': self._clean_text(submission.selftext),
-                        'author': str(submission.author),
-                        'created_utc': self.format_timestamp(submission.created_utc),
+                        # 'author': str(submission.author),
+                        # 'created_utc': self.format_timestamp(submission.created_utc),
                         'score': submission.score,
                         'upvotes': submission.ups,
                         'downvotes': submission.downs,
                         'num_comments': submission.num_comments,
-                        'url': submission.url,
-                        'permalink': submission.permalink,
-                        'collected_at': datetime.now().isoformat()
+                        # 'url': submission.url,
+                        # 'permalink': submission.permalink,
+                        # 'collected_at': datetime.now().isoformat()
                     }
                     collected_data.append(post_data)
                     

@@ -1,32 +1,37 @@
 import os
 from dotenv import load_dotenv
 
+# Load environment variables from .env file
 load_dotenv()
 
 class Config:
-    """Configuration management for API keys and settings."""
-    
-    # Reddit Configuration
+    # Reddit API Configuration
     REDDIT_CLIENT_ID = os.getenv('REDDIT_CLIENT_ID')
     REDDIT_CLIENT_SECRET = os.getenv('REDDIT_CLIENT_SECRET')
-    REDDIT_USER_AGENT = os.getenv('REDDIT_USER_AGENT')
+    REDDIT_USER_AGENT = os.getenv('REDDIT_USER_AGENT', 'SentimentAnalysisBot/1.0')
     
-    # YouTube Configuration
+    # YouTube API Configuration
     YOUTUBE_API_KEY = os.getenv('YOUTUBE_API_KEY')
     
-    # Storage Configuration
+    # Data Storage
     DATA_STORAGE_PATH = os.getenv('DATA_STORAGE_PATH', './outputs/raw_data')
     
     @classmethod
     def validate_config(cls):
-        """Validate that all required environment variables are set."""
-        required_vars = {
-            'REDDIT_CLIENT_ID': cls.REDDIT_CLIENT_ID,
-            'REDDIT_CLIENT_SECRET': cls.REDDIT_CLIENT_SECRET,
-            'REDDIT_USER_AGENT': cls.REDDIT_USER_AGENT,
-            'YOUTUBE_API_KEY': cls.YOUTUBE_API_KEY
-        }
+        """Validate that all required configurations are present."""
+        errors = []
         
-        missing_vars = [var for var, value in required_vars.items() if not value]
-        if missing_vars:
-            raise ValueError(f"Missing required environment variables: {', '.join(missing_vars)}")
+        # Only validate Reddit if we're using it
+        if not cls.REDDIT_CLIENT_ID:
+            errors.append("REDDIT_CLIENT_ID is missing")
+        if not cls.REDDIT_CLIENT_SECRET:
+            errors.append("REDDIT_CLIENT_SECRET is missing")
+        if not cls.YOUTUBE_API_KEY:
+            errors.append("YOUTUBE_API_KEY is missing")
+            
+        if errors:
+            raise ValueError(f"Configuration errors: {', '.join(errors)}")
+
+
+
+
