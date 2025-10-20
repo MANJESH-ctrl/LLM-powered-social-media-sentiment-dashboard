@@ -13,7 +13,7 @@ def test_collectors():
         
         # Test Reddit Collector
         try:
-            from src.data.collectors.reddit_collector import RedditCollector
+            from src.data.collectors.reddit_collector1 import RedditCollector
             collector = RedditCollector()
             print("✅ RedditCollector initialized")
         except Exception as e:
@@ -21,7 +21,7 @@ def test_collectors():
         
         # Test YouTube Collector
         try:
-            from src.data.collectors.youtube_collector import YouTubeCollector
+            from src.data.collectors.youtube_collector1 import YouTubeCollector
             collector = YouTubeCollector()
             print("✅ YouTubeCollector initialized")
         except Exception as e:

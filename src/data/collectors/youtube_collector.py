@@ -5,7 +5,7 @@ from utils.config import Config
 from datetime import datetime
 
 class YouTubeCollector(BaseDataCollector):
-    """Data collector for YouTube platform."""
+    """Data collector for YouTube platform with enhanced keyword strategies."""
     
     def __init__(self):
         super().__init__("youtube")
@@ -20,24 +20,75 @@ class YouTubeCollector(BaseDataCollector):
     
     def collect_data(self, brand_name: str, keywords: str, time_period: str = "any", limit: int = 50) -> List[Dict[str, Any]]:
         """
-        Collect videos and comments from YouTube.
-        
-        Args:
-            brand_name: Brand name to search for
-            keywords: Additional keywords (comma-separated)
-            time_period: Not fully implemented for YouTube in initial version
-            limit: Number of videos to collect
-            
-        Returns:
-            List of video and comment data dictionaries
+        Collect videos and comments from YouTube using smart strategies.
         """
-        search_query = self._build_search_query(brand_name, keywords)
+        return self.collect_data_with_strategies(brand_name, keywords, time_period, limit)
+    
+    def collect_data_with_strategies(self, brand_name: str, keywords: str, time_period: str = "any", limit: int = 50) -> List[Dict[str, Any]]:
+        """Try multiple collection strategies until we get data"""
+        
+        strategies = [
+            # Strategy 1: Brand + keywords + emotional indicators
+            {
+                "name": "Brand with keywords and emotional indicators",
+                "query": self._build_search_query(brand_name, keywords, include_emotional=True),
+                "use_keywords": True
+            },
+            # Strategy 2: Brand + emotional indicators only
+            {
+                "name": "Brand with emotional indicators only", 
+                "query": self._build_fallback_query(brand_name),
+                "use_keywords": False
+            },
+            # Strategy 3: Brand only
+            {
+                "name": "Brand only",
+                "query": brand_name,
+                "use_keywords": False
+            }
+        ]
+        
+        collected_data = []
+        
+        for strategy in strategies:
+            if len(collected_data) >= limit:
+                break
+                
+            try:
+                print(f"🔄 Trying strategy: {strategy['name']}")
+                print(f"   Query: {strategy['query']}")
+                
+                strategy_data = self._execute_search(
+                    strategy['query'], 
+                    brand_name, 
+                    limit - len(collected_data)
+                )
+                
+                if strategy_data:
+                    collected_data.extend(strategy_data)
+                    print(f"✅ Strategy successful: collected {len(strategy_data)} items")
+                    
+                    # If we got good data with this strategy, we're done
+                    if len(strategy_data) >= 3:  # If we got at least 3 items, good enough
+                        break
+                else:
+                    print(f"⚠️ No results with this strategy")
+                    
+            except Exception as e:
+                print(f"❌ Strategy failed: {e}")
+                continue
+        
+        print(f"🎯 Total collected: {len(collected_data)} items using {len(strategies)} strategies")
+        return collected_data
+    
+    def _execute_search(self, query: str, brand_name: str, limit: int) -> List[Dict[str, Any]]:
+        """Execute search with given query"""
         collected_data = []
         
         try:
             # Search for videos
             search_response = self.youtube.search().list(
-                q=search_query,
+                q=query,
                 part='snippet',
                 type='video',
                 maxResults=min(limit, 50),  # YouTube API limit
@@ -47,14 +98,17 @@ class YouTubeCollector(BaseDataCollector):
             for item in search_response.get('items', []):
                 video_data = self._extract_video_data(item, brand_name)
                 if video_data:
+                    video_data['search_strategy'] = query  # Track which query found this
                     collected_data.append(video_data)
                 
                 # Get comments for the video
-                comments = self._get_video_comments(item['id']['videoId'], brand_name)
+                comments = self._get_video_comments(item['id']['videoId'], brand_name, max_comments=5)
+                for comment in comments:
+                    comment['search_strategy'] = query
                 collected_data.extend(comments)
                 
         except Exception as e:
-            print(f"Error collecting YouTube data: {str(e)}")
+            print(f"Error in YouTube search execution: {str(e)}")
         
         return collected_data
     
@@ -79,23 +133,18 @@ class YouTubeCollector(BaseDataCollector):
             return {
                 'platform': 'youtube',
                 'brand_name': brand_name,
-                # 'id': video_id,
                 'title': snippet['title'],
                 'text': self._clean_text(snippet['description']),
-                # 'author': snippet['channelTitle'],
-                # 'created_utc': snippet['publishedAt'],
                 'views': int(stats.get('viewCount', 0)),
                 'likes': int(stats.get('likeCount', 0)),
                 'comments_count': int(stats.get('commentCount', 0)),
-                # 'url': f"https://www.youtube.com/watch?v={video_id}",
                 'content_type': 'video',
-                # 'collected_at': datetime.now().isoformat()
             }
         except Exception as e:
             print(f"Error extracting video data: {str(e)}")
             return None
     
-    def _get_video_comments(self, video_id: str, brand_name: str, max_comments: int = 20) -> List[Dict[str, Any]]:
+    def _get_video_comments(self, video_id: str, brand_name: str, max_comments: int = 5) -> List[Dict[str, Any]]:
         """Get comments for a video."""
         comments_data = []
         
@@ -113,17 +162,10 @@ class YouTubeCollector(BaseDataCollector):
                 comment_data = {
                     'platform': 'youtube',
                     'brand_name': brand_name,
-                    # 'id': item['id'],
                     'title': '',  # Comments don't have titles
                     'text': self._clean_text(comment['textDisplay']),
-                    # 'author': comment['authorDisplayName'],
-                    # 'created_utc': comment['publishedAt'],
                     'likes': int(comment.get('likeCount', 0)),
-                    # 'views': 0,
-                    # 'comments_count': 0,
-                    # 'url': f"https://www.youtube.com/watch?v={video_id}&lc={item['id']}",
                     'content_type': 'comment',
-                    # 'collected_at': datetime.now().isoformat()
                 }
                 comments_data.append(comment_data)
                 
@@ -133,12 +175,47 @@ class YouTubeCollector(BaseDataCollector):
         
         return comments_data
     
-    def _build_search_query(self, brand_name: str, keywords: str) -> str:
-        """Build search query from brand name and keywords."""
+
+
+
+    def _build_search_query(self, brand_name: str, keywords: str, include_emotional: bool = True) -> str:
+        """Build search query with EXPANDED emotional indicators"""
+        # Expanded emotional indicators for better sentiment-rich content
+        EMOTIONAL_INDICATORS = [
+            "love", "hate", "best", "worst", "awesome", "terrible", "amazing", "awful",
+            "disappointing", "brilliant", "rubbish", "fantastic", "horrible", "perfect",
+            "broken", "waste of money", "recommend", "avoid", "regret", "sucks", "great", 
+            "bad", "excellent", "poor", "beautiful", "ugly", "fast", "slow", "easy", 
+            "difficult", "user-friendly", "complicated", "worth it", "overpriced", 
+            "cheap", "expensive", "bargain", "rip-off", "happy", "sad", "angry", 
+            "frustrated", "delighted", "disgusted", "pleased", "annoyed", "satisfied",
+            "unsatisfied", "like", "dislike", "issue", "problem", "bug", "crash"
+        ]
+    
+        # Start with brand name
         query_parts = [brand_name]
+    
+        # Add user keywords if provided
         if keywords:
-            query_parts.extend([kw.strip() for kw in keywords.split(',')])
-        return ' '.join(query_parts)
+            keyword_list = [kw.strip() for kw in keywords.split(',') if kw.strip()]
+            query_parts.extend(keyword_list)
+    
+        # Add emotional indicators to find opinionated content
+        if include_emotional:
+            query_parts.extend(EMOTIONAL_INDICATORS)
+    
+        # Use OR to cast a wider net for emotional content
+        return ' OR '.join(query_parts)
+      
+
+
+
+
+    
+   
+    def _build_fallback_query(self, brand_name: str) -> str:
+        """Fallback query using brand and emotional indicators only"""
+        return f'{brand_name} {" ".join(self.EMOTIONAL_INDICATORS)}'
     
     def _clean_text(self, text: str) -> str:
         """Clean text data for analysis."""

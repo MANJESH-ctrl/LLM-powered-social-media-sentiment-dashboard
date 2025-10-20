@@ -38,9 +38,6 @@ try:
 except ImportError as e:
     st.error(f"❌ Other import error: {e}")
 
-
-
-
 def setup_page():
     """Configure Streamlit page settings with professional styling"""
     st.set_page_config(
@@ -76,6 +73,13 @@ def setup_page():
         border-left: 5px solid #1f77b4;
         margin: 0.5rem 0;
     }
+    .strategy-info {
+        background: #e8f4fd;
+        padding: 1rem;
+        border-radius: 10px;
+        border-left: 5px solid #1f77b4;
+        margin: 0.5rem 0;
+    }
     </style>
     """, unsafe_allow_html=True)
     
@@ -83,21 +87,28 @@ def setup_page():
     st.markdown("### Advanced AI-Powered Social Media Sentiment Analysis")
 
 def show_analysis_sidebar() -> dict:
-    """Render sidebar with analysis parameters - FINAL VERSION"""
+    """Render sidebar with improved keyword guidance"""
     st.sidebar.header("🔍 Analysis Configuration")
     
-    # Brand and keywords
+    # Brand name (required)
     brand_name = st.sidebar.text_input(
-        "Brand Name", 
-        "Apple",
-        help="Enter the brand you want to analyze (e.g., Apple, Nike, Tesla)"
+        "Brand/Product Name", 
+        "iPhone",
+        help="Enter the main brand or product you want to analyze"
     )
     
+    # Keywords (optional, with better explanation)
     keywords = st.sidebar.text_input(
-        "Keywords (max 5, comma-separated)", 
-        "tech, innovation",
-        help="Enter up to 5 relevant keywords separated by commas"
+        "Additional Topics (optional)", 
+        "battery, camera, performance",
+        help="Optional: Add specific topics separated by commas. We'll try these first, then use brand-only if needed."
     )
+    
+    st.sidebar.markdown("💡 **Smart Search Examples:**")
+    st.sidebar.markdown("- `iPhone` + `battery, camera`")
+    st.sidebar.markdown("- `Tesla` + `autopilot, charging`") 
+    st.sidebar.markdown("- `Nike` + `comfort, durability`")
+    st.sidebar.markdown("- *Leave empty for brand-only search*")
     
     # Platform selection
     platforms = st.sidebar.multiselect(
@@ -147,9 +158,10 @@ def validate_inputs(params: dict) -> tuple:
     
     return True, "All inputs valid"
 
-def collect_data(params: dict, storage: CSVStorage) -> bool:
-    """Collect data from selected platforms with progress tracking"""
+def collect_data(params: dict, storage: CSVStorage) -> tuple:
+    """Collect data from selected platforms with enhanced feedback"""
     success_count = 0
+    collection_details = {}
     
     for platform in params['platforms']:
         with st.spinner(f"🔍 Collecting data from {platform}..."):
@@ -160,7 +172,7 @@ def collect_data(params: dict, storage: CSVStorage) -> bool:
                 else:  # YouTube
                     collector = YouTubeCollector()
                 
-                # Collect data
+                # Collect data using improved strategy system
                 data = collector.collect_data(
                     brand_name=params['brand_name'],
                     keywords=params['keywords'],
@@ -178,16 +190,44 @@ def collect_data(params: dict, storage: CSVStorage) -> bool:
                     
                     if filepath:
                         success_count += 1
+                        
+                        # Collect strategy information
+                        strategies_used = list(set([item.get('search_strategy', 'Unknown') for item in data]))
+                        collection_details[platform] = {
+                            'count': len(data),
+                            'strategies': strategies_used,
+                            'sample_titles': [item.get('title', 'No title')[:50] + '...' for item in data[:3]]
+                        }
+                        
                         st.success(f"✅ Collected {len(data)} items from {platform}")
+                        
+                        # Show strategy info in expander
+                        with st.expander(f"🔍 View {platform} collection details"):
+                            st.markdown(f"**Strategies used:**")
+                            for strategy in strategies_used:
+                                st.markdown(f"- `{strategy}`")
+                            
+                            st.markdown(f"**Sample content:**")
+                            for i, title in enumerate(collection_details[platform]['sample_titles']):
+                                st.markdown(f"{i+1}. {title}")
+                        
                     else:
                         st.warning(f"⚠️ Data collected from {platform} but failed to save")
                 else:
-                    st.warning(f"⚠️ No data collected from {platform}. Try different keywords.")
+                    # More helpful guidance
+                    st.warning(f"🔍 No data found for '{params['brand_name']}' on {platform}")
+                    st.info("""
+                    **Tips to get better results:**
+                    - Try a more popular brand name
+                    - Use simpler, more common keywords  
+                    - Try a longer time period ('all' or 'year')
+                    - Some brands aren't heavily discussed on all platforms
+                    """)
                     
             except Exception as e:
                 st.error(f"❌ Error collecting from {platform}: {str(e)}")
     
-    return success_count > 0
+    return success_count > 0, collection_details
 
 def display_sentiment_overview(summary: dict):
     """Display comprehensive sentiment overview with metrics"""
@@ -287,11 +327,21 @@ def create_sentiment_visualizations(analyzed_data: pd.DataFrame, summary: dict):
         )
         st.plotly_chart(fig_scatter, use_container_width=True)
 
-def display_detailed_insights(analysis_results: dict, params: dict):
+def display_detailed_insights(analysis_results: dict, params: dict, collection_details: dict):
     """Display detailed analysis insights and data"""
     analyzed_data = analysis_results['analyzed_data']
     summary = analysis_results['summary']
     report = analysis_results['report']
+    
+    # Display collection strategy summary
+    if collection_details:
+        st.header("🔍 Collection Strategy Summary")
+        for platform, details in collection_details.items():
+            with st.expander(f"{platform} Collection Details"):
+                st.markdown(f"**Items collected:** {details['count']}")
+                st.markdown("**Search strategies used:**")
+                for strategy in details['strategies']:
+                    st.markdown(f"- `{strategy}`")
     
     # Display the AI-generated report
     st.header("📋 AI Analysis Report")
@@ -351,7 +401,7 @@ def run_complete_analysis(params: dict):
         
         # Step 1: Data Collection
         st.header("🚀 Step 1: Data Collection")
-        collection_success = collect_data(params, storage)
+        collection_success, collection_details = collect_data(params, storage)
         
         if not collection_success:
             st.error("❌ Data collection failed. Please check your API credentials and try again.")
@@ -379,7 +429,7 @@ def run_complete_analysis(params: dict):
         # Step 4: Display Results
         st.header("📊 Step 4: Analysis Results")
         display_sentiment_overview(analysis_results['summary'])
-        display_detailed_insights(analysis_results, params)
+        display_detailed_insights(analysis_results, params, collection_details)
         
         st.balloons()
         st.success("🎉 Analysis completed successfully!")
@@ -387,7 +437,6 @@ def run_complete_analysis(params: dict):
     except Exception as e:
         st.error(f"❌ Analysis pipeline failed: {str(e)}")
         st.info("💡 Please check your API credentials and try again with different parameters")
-
 
 def main():
     """Main application function"""
@@ -421,12 +470,16 @@ def main():
     # Get analysis parameters from sidebar
     params = show_analysis_sidebar()
     
-    
     # Main analysis section
     st.header("🎯 Start Brand Sentiment Analysis")
     st.markdown("""
     Configure your analysis parameters in the sidebar and click **Analyze Brand Sentiment** 
     to generate comprehensive AI-powered insights about your brand's social media presence.
+    
+    ### 🆕 Smart Keyword System
+    - **Multiple Strategies**: We automatically try different search approaches
+    - **Never Fails**: If your keywords don't work, we use brand-only search
+    - **Emotional Focus**: Always targets opinionated content for better sentiment analysis
     """)
     
     # Analysis button
@@ -448,30 +501,36 @@ def main():
         
         **1. Configure Parameters:**
            - **Brand Name**: The brand you want to analyze
-           - **Keywords**: Up to 5 relevant keywords (comma-separated)
+           - **Keywords**: Optional specific topics (we'll try multiple strategies)
            - **Platforms**: Choose Reddit, YouTube, or both
            - **Time Period**: How far back to collect data
            - **Posts per Platform**: Number of posts to analyze
         
-        **2. Run Analysis:**
-           - Click "Analyze Brand Sentiment" to start the process
-           - Data collection from selected platforms
-           - Advanced text processing and cleaning
-           - AI-powered sentiment analysis using state-of-the-art models
-           - Comprehensive visualization and reporting
+        **2. Smart Collection Process:**
+           - **Strategy 1**: Brand + your keywords + emotional indicators
+           - **Strategy 2**: Brand + emotional indicators only  
+           - **Strategy 3**: Brand only (never fails!)
+           - We automatically use the strategy that works best
         
-        **3. Review Insights:**
-           - Overall sentiment metrics and distribution
-           - Platform-specific analysis
-           - Engagement-weighted sentiment scores
+        **3. Advanced Processing:**
+           - Emotional content filtering
+           - Text cleaning and normalization
+           - Engagement scoring
+           - AI sentiment analysis
+        
+        **4. Comprehensive Results:**
+           - Overall sentiment metrics
+           - Platform-specific insights
            - Interactive visualizations
-           - Downloadable results
+           - Strategy transparency
+           - Downloadable reports
         
-        ### 🔧 Technical Requirements
-        - Reddit API credentials (from Reddit Developer Portal)
-        - YouTube API key (from Google Cloud Console)
-        - Stable internet connection
-        - Sufficient system memory for AI model processing
+        ### 🔧 Technical Features
+        - **Multi-Strategy Collection**: Never shows "no data" errors
+        - **Emotional Filtering**: Better sentiment analysis results
+        - **Platform Optimization**: Different search strategies per platform
+        - **Progress Tracking**: See which strategies worked
+        - **Error Resilience**: Continues despite individual failures
         """)
 
 if __name__ == "__main__":

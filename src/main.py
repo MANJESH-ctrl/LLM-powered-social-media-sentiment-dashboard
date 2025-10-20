@@ -9,7 +9,7 @@ def main():
         print("📊 Open your browser and navigate to the localhost address shown below")
         
         # Import and run streamlit app
-        from src.dashboard.app12 import main as st_main
+        from src.dashboard.app import main as st_main
         st_main()
         
     except Exception as e:

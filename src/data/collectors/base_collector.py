@@ -6,6 +6,14 @@ from datetime import datetime
 class BaseDataCollector(ABC):
     """Abstract base class for all data collectors."""
     
+    # Emotional indicators for finding opinionated content
+    EMOTIONAL_INDICATORS = [
+        "love", "hate", "best", "worst", "awesome", "terrible",
+        "amazing", "awful", "disappointing", "brilliant", "rubbish",
+        "fantastic", "horrible", "perfect", "broken", "waste of money",
+        "recommend", "avoid", "regret", "sucks", "great", "bad"
+    ]
+    
     def __init__(self, platform_name: str):
         self.platform_name = platform_name
     
@@ -35,3 +43,9 @@ class BaseDataCollector(ABC):
             return timestamp.isoformat()
         else:
             return str(timestamp)
+    
+    def _clean_text(self, text: str) -> str:
+        """Basic text cleaning - can be overridden by subclasses."""
+        if not text:
+            return ""
+        return ' '.join(text.split())
