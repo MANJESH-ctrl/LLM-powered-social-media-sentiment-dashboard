@@ -8,11 +8,16 @@ class BaseDataCollector(ABC):
     
     # Emotional indicators for finding opinionated content
     EMOTIONAL_INDICATORS = [
-        "love", "hate", "best", "worst", "awesome", "terrible",
-        "amazing", "awful", "disappointing", "brilliant", "rubbish",
-        "fantastic", "horrible", "perfect", "broken", "waste of money",
-        "recommend", "avoid", "regret", "sucks", "great", "bad"
-    ]
+            "love", "hate", "best", "worst", "awesome", "terrible", "amazing", "awful",
+            "disappointing", "brilliant", "rubbish", "fantastic", "horrible", "perfect",
+            "broken", "waste of money", "recommend", "avoid", "regret", "sucks", "great", 
+            "bad", "excellent", "poor", "beautiful", "ugly", "fast", "slow", "easy", 
+            "difficult", "user-friendly", "complicated", "worth it", "overpriced", 
+            "cheap", "expensive", "bargain", "rip-off", "happy", "sad", "angry", 
+            "frustrated", "delighted", "disgusted", "pleased", "annoyed", "satisfied",
+            "unsatisfied", "like", "dislike", "issue", "problem", "bug", "crash"
+        ]
+    
     
     def __init__(self, platform_name: str):
         self.platform_name = platform_name

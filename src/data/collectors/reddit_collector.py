@@ -135,41 +135,73 @@ class RedditCollector(BaseDataCollector):
 
 
     def _build_search_query(self, brand_name: str, keywords: str, include_emotional: bool = True) -> str:
-        """Build search query with EXPANDED emotional indicators"""
-        # Expanded emotional indicators for better sentiment-rich content
-        EMOTIONAL_INDICATORS = [
-            "love", "hate", "best", "worst", "awesome", "terrible", "amazing", "awful",
-            "disappointing", "brilliant", "rubbish", "fantastic", "horrible", "perfect",
-            "broken", "waste of money", "recommend", "avoid", "regret", "sucks", "great", 
-            "bad", "excellent", "poor", "beautiful", "ugly", "fast", "slow", "easy", 
-            "difficult", "user-friendly", "complicated", "worth it", "overpriced", 
-            "cheap", "expensive", "bargain", "rip-off", "happy", "sad", "angry", 
-            "frustrated", "delighted", "disgusted", "pleased", "annoyed", "satisfied",
-            "unsatisfied", "like", "dislike", "issue", "problem", "bug", "crash"
-        ]
-    
-        # Start with brand name
-        query_parts = [brand_name]
-    
+        """Build smart search query with emotional indicators"""
+
+        # Start with brand name in quotes for exact match
+        query_parts = [f'"{brand_name}"']
+        
         # Add user keywords if provided
         if keywords:
             keyword_list = [kw.strip() for kw in keywords.split(',') if kw.strip()]
-            query_parts.extend(keyword_list)
-    
+            if keyword_list:
+                # Use OR for keywords within the same group
+                keywords_group = " OR ".join(keyword_list)
+                query_parts.append(f"({keywords_group})")
+        
         # Add emotional indicators to find opinionated content
         if include_emotional:
-            query_parts.extend(EMOTIONAL_INDICATORS)
+            emotional_group = " OR ".join(self.EMOTIONAL_INDICATORS)
+            query_parts.append(f"({emotional_group})")
+        
+        # Combine with AND logic: brand AND (keywords OR emotional)
+        return " AND ".join(query_parts)
     
-        # Use OR to cast a wider net for emotional content
-        return ' OR '.join(query_parts)
+    def _build_fallback_query(self, brand_name: str) -> str:
+        """Fallback query using brand and emotional indicators only"""
+        
+        emotional_group = " OR ".join(self.EMOTIONAL_INDICATORS)
+        return f'"{brand_name}" AND ({emotional_group})'
+    
+    
+
+    # # Previous versions of the methods for reference
+    
+    # def _build_search_query(self, brand_name: str, keywords: str, include_emotional: bool = True) -> str:
+    #     """Build search query with EXPANDED emotional indicators"""
+    #     # Expanded emotional indicators for better sentiment-rich content
+    #     EMOTIONAL_INDICATORS = [
+    #         "love", "hate", "best", "worst", "awesome", "terrible", "amazing", "awful",
+    #         "disappointing", "brilliant", "rubbish", "fantastic", "horrible", "perfect",
+    #         "broken", "waste of money", "recommend", "avoid", "regret", "sucks", "great", 
+    #         "bad", "excellent", "poor", "beautiful", "ugly", "fast", "slow", "easy", 
+    #         "difficult", "user-friendly", "complicated", "worth it", "overpriced", 
+    #         "cheap", "expensive", "bargain", "rip-off", "happy", "sad", "angry", 
+    #         "frustrated", "delighted", "disgusted", "pleased", "annoyed", "satisfied",
+    #         "unsatisfied", "like", "dislike", "issue", "problem", "bug", "crash"
+    #     ]
+    
+    #     # Start with brand name
+    #     query_parts = [brand_name]
+    
+    #     # Add user keywords if provided
+    #     if keywords:
+    #         keyword_list = [kw.strip() for kw in keywords.split(',') if kw.strip()]
+    #         query_parts.extend(keyword_list)
+    
+    #     # Add emotional indicators to find opinionated content
+    #     if include_emotional:
+    #         query_parts.extend(EMOTIONAL_INDICATORS)
+    
+    #     # Use OR to cast a wider net for emotional content
+    #     return ' OR '.join(query_parts)
     
 
     
     
-    def _build_fallback_query(self, brand_name: str) -> str:
-        """Fallback query using brand and emotional indicators only"""
-        emotional_group = " OR ".join(self.EMOTIONAL_INDICATORS)
-        return f'"{brand_name}" AND ({emotional_group})'
+    # def _build_fallback_query(self, brand_name: str) -> str:
+    #     """Fallback query using brand and emotional indicators only"""
+    #     emotional_group = " OR ".join(self.EMOTIONAL_INDICATORS)
+    #     return f'"{brand_name}" AND ({emotional_group})'
     
     def _clean_text(self, text: str) -> str:
         """Clean text data for analysis."""
